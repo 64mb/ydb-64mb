@@ -6,36 +6,41 @@ ENV TZ=Etc/UTC
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-      python3 curl lsb-release python3-dev libc6-dev libidn11-dev libaio1 libaio-dev libgcc-11-dev binutils tree git
+      python3 curl lsb-release python3-dev libc6-dev libidn11-dev libaio1 libaio-dev libgcc-11-dev binutils git
 
-COPY ydbd/ /ydbwork/ydbd/
-WORKDIR /ydbwork/ydbd/
-RUN ./ya make -r -T -DFORCE_VCS_INFO_UPDATE \
+RUN git config --global --add safe.directory /ydbwork/src && mkdir -p /ydbwork/bin
+
+ARG YDBD_SOURCE=ydbd
+RUN --mount=type=bind,source=${YDBD_SOURCE},target=/ydbwork/src,rw \
+    cd /ydbwork/src \
+    && ./ya make -r -T -DFORCE_VCS_INFO_UPDATE \
       -C ydb/apps/ydbd/ydbd \
       -o /ydbwork/out/ \
     && /ydbwork/out/ydb/apps/ydbd/ydbd -V \
-    && tree /ydbwork/out/ \
-    && strip /ydbwork/out/ydb/apps/ydbd/ydbd \
-    && rm -rf ~/.ya  || echo 'unable to delete ~/.ya' # for reduce cache size
+    && install -m 0755 /ydbwork/out/ydb/apps/ydbd/ydbd /ydbwork/bin/ydbd \
+    && strip /ydbwork/bin/ydbd \
+    && rm -rf ~/.ya /ydbwork/out
 
-COPY cli/ /ydbwork/cli/
-WORKDIR /ydbwork/cli/
-RUN ./ya make -r -T \
+ARG CLI_SOURCE=cli
+RUN --mount=type=bind,source=${CLI_SOURCE},target=/ydbwork/src,rw \
+    cd /ydbwork/src \
+    && ./ya make -r -T \
       -C ydb/apps/ydb/ydb \
       -o /ydbwork/out/ \
-    && /ydbwork/out/cli/apps/ydb/ydb version \
-    && tree /ydbwork/out/ \
-    && strip /ydbwork/out/ydb/apps/ydb/ydb \
-    && rm -rf ~/.ya  || echo 'unable to delete ~/.ya' # for reduce cache size
+    && /ydbwork/out/ydb/apps/ydb/ydb version \
+    && install -m 0755 /ydbwork/out/ydb/apps/ydb/ydb /ydbwork/bin/ydb \
+    && strip /ydbwork/bin/ydb \
+    && rm -rf ~/.ya /ydbwork/out
 
-COPY local_ydb/ /ydbwork/local_ydb/
-WORKDIR /ydbwork/local_ydb/
-RUN ./ya make -r -T \
+ARG LOCAL_YDB_SOURCE=local_ydb
+RUN --mount=type=bind,source=${LOCAL_YDB_SOURCE},target=/ydbwork/src,rw \
+    cd /ydbwork/src \
+    && ./ya make -r -T \
       -C ydb/public/tools/local_ydb/local_ydb \
       -o /ydbwork/out/ \
-    && tree /ydbwork/out/ \
-    && strip /ydbwork/out/ydb/public/tools/local_ydb/local_ydb \
-    && rm -rf ~/.ya  || echo 'unable to delete ~/.ya' # for reduce cache size
+    && install -m 0755 /ydbwork/out/ydb/public/tools/local_ydb/local_ydb /ydbwork/bin/local_ydb \
+    && strip /ydbwork/bin/local_ydb \
+    && rm -rf ~/.ya /ydbwork/out
 
 FROM ubuntu:22.04
 RUN apt-get update  \
@@ -46,12 +51,13 @@ RUN mkdir -p /ydb_data && mkdir -p /ydb_certs
 RUN mkdir -p /ydb_data/cluster/kikimr_configs \
     && touch /ydb_data/cluster/kikimr_configs/config.yaml
 
-COPY main/.github/docker/files/ /
+ARG DOCKER_FILES=main/.github/docker/files
+COPY ${DOCKER_FILES}/ /
 RUN chmod +x /health_check /initialize_local_ydb
 COPY --from=builder \
-    /ydbwork/out/ydb/apps/ydbd/ydbd \
-    /ydbwork/out/ydb/apps/ydb/ydb \
-    /ydbwork/out/ydb/public/tools/local_ydb/local_ydb \
+    /ydbwork/bin/ydbd \
+    /ydbwork/bin/ydb \
+    /ydbwork/bin/local_ydb \
     /
 
 # Persist the setting in the image so it also applies when /ydb is used

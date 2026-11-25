@@ -2,6 +2,8 @@
 
 set -Eeuo pipefail
 
+export IMAGE_PLATFORM=${IMAGE_PLATFORM:-linux/amd64}
+
 : "${IMAGE:?Set IMAGE to the Docker image under test}"
 : "${EXPECTED_REVISION:?Set EXPECTED_REVISION to the ydbd Git revision}"
 

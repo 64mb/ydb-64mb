@@ -17,7 +17,7 @@ test_default_startup() {
     wait_for_healthy "$container"
     grpc_port=$(published_port "$container" 2136)
     mon_port=$(published_port "$container" 8765)
-    docker run --rm --pull never --platform linux/amd64 --network host --entrypoint /ydb "$IMAGE" \
+    docker run --rm --pull never --platform "$IMAGE_PLATFORM" --network host --entrypoint /ydb "$IMAGE" \
         --endpoint "grpc://127.0.0.1:${grpc_port}" --database /local --no-discovery \
         sql -s 'SELECT 1;'
     curl --fail --location --silent --show-error --max-time 10 \

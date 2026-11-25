@@ -2,6 +2,8 @@
 # Run: IMAGE=your-built-image bash .github/docker/tests/test_healthcheck.sh
 # Only /ydb is replaced; timeout, flock, procfs and Docker restart are real.
 set -Eeuo pipefail
+
+IMAGE_PLATFORM=${IMAGE_PLATFORM:-linux/amd64}
 : "${IMAGE:?Set IMAGE to the Docker image under test}"
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -292,7 +294,7 @@ test_read_only_cache() {
     probe readiness
     # Seed the frozen volume through a writer container; the probe sees it read-only.
     shell 'cat /dev/shm/ydb_health/last_readiness_ok' |
-        docker run --rm -i --pull never --platform linux/amd64 --network none --no-healthcheck --entrypoint bash \
+        docker run --rm -i --pull never --platform "$IMAGE_PLATFORM" --network none --no-healthcheck --entrypoint bash \
             --volume "${frozen_volume}:/state" "$IMAGE" \
             -ec 'cat >/state/last_readiness_ok'
     shell ': >/tmp/fixture/calls'
@@ -359,7 +361,7 @@ for mode in writable read-only masked-uptime; do
     create_volume "$fixture_volume"
     create_volume "$frozen_volume"
     register_container "$container"
-    command=(docker run -d --pull never --platform linux/amd64 --network none --no-healthcheck --entrypoint sleep --name "$container")
+    command=(docker run -d --pull never --platform "$IMAGE_PLATFORM" --network none --no-healthcheck --entrypoint sleep --name "$container")
     if [[ "$mode" == read-only ]]; then command+=(--read-only); fi
     if [[ "$mode" == masked-uptime ]]; then
         command+=(--mount type=bind,src=/dev/null,dst=/proc/uptime,readonly)
