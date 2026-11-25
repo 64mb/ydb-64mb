@@ -20,5 +20,6 @@ The acceptance suite uses Linux host networking. Run it from the Linux Docker
 host so that the test scripts can reach the database ports.
 
 The **Build local YDB for ARM64** workflow uses a Linux ARM64 self-hosted runner
-labeled `ydb-docker`. Dispatch it from GitHub Actions to build, test, and publish
+labeled `ydb-docker`. Once the workflow is on the default branch, dispatch it
+from GitHub Actions to build, test, and publish
 `ghcr.io/<owner>/local-ydb:arm64-<commit>`.
