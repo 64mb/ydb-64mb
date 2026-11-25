@@ -1,0 +1,54 @@
+name: Build local YDB for ARM64
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: [self-hosted, linux, ARM64, ydb-docker]
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_PLATFORM: linux/arm64
+      EXPECTED_REVISION: ${{ github.sha }}
+      IMAGE: ghcr.io/${{ github.repository_owner }}/local-ydb:arm64-${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Build ARM64 image
+        run: |
+          docker build --platform "$IMAGE_PLATFORM" \
+            --build-arg YDBD_SOURCE=. --build-arg CLI_SOURCE=. --build-arg LOCAL_YDB_SOURCE=. \
+            --build-arg DOCKER_FILES=.github/docker/files \
+            --label "ydb.revision=$EXPECTED_REVISION" \
+            --label "org.opencontainers.image.revision=$EXPECTED_REVISION" \
+            --file .github/docker/Dockerfile --tag "$IMAGE" .
+
+      - name: Run Docker acceptance tests
+        env:
+          ACCEPTANCE_ARTIFACTS: ${{ runner.temp }}/local-ydb-arm64-acceptance
+        run: bash .github/docker/tests/run_acceptance_tests.sh
+
+      - name: Upload Docker acceptance diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-acceptance-arm64
+          path: ${{ runner.temp }}/local-ydb-arm64-acceptance
+          if-no-files-found: ignore
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push accepted ARM64 image
+        run: docker push "$IMAGE"

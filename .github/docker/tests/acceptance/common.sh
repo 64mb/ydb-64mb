@@ -59,7 +59,7 @@ start_detached() {
     docker run \
         --detach \
         --pull never \
-        --platform linux/amd64 \
+        --platform "$IMAGE_PLATFORM" \
         --hostname localhost \
         --name "$name" \
         "$@" \
@@ -257,7 +257,7 @@ hash_certificate_bundle() {
 
     docker run --rm \
         --pull never \
-        --platform linux/amd64 \
+        --platform "$IMAGE_PLATFORM" \
         --entrypoint bash \
         --volume "${directory}:/certs:ro" \
         "$IMAGE" \

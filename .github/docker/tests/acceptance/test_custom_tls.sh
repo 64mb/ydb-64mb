@@ -15,7 +15,7 @@ test_custom_tls() {
         --volume "${GENERATED_CERTS}:/custom-certs:ro"
     wait_for_ready "$container"
     host_port=$(published_port "$container" 2135)
-    docker run --rm --pull never --platform linux/amd64 --network host \
+    docker run --rm --pull never --platform "$IMAGE_PLATFORM" --network host \
         --volume "${GENERATED_CERTS}:/custom-certs:ro" \
         --entrypoint /ydb \
         "$IMAGE" \

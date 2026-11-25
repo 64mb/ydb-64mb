@@ -8,7 +8,7 @@ test_interactive() {
     docker run \
         --interactive \
         --pull never \
-        --platform linux/amd64 \
+        --platform "$IMAGE_PLATFORM" \
         --no-healthcheck \
         --hostname localhost \
         --name "$container" \
